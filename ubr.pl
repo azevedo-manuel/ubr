@@ -25,6 +25,7 @@
 #
 # Change log:
 # Version 0.1 - Initial version
+# Version 0.2 - Fix sort issue
 #
 #
 # Command line switches:
@@ -41,21 +42,24 @@ use Net::Domain qw(hostfqdn);
 #
 # App parameters
 
-my $baseDir             = "./backup";
-my $xmlString           = "drfComponent.xml";
+my $baseDir             = "../CUCM/backup";
 
-my $newerBackupMaxDays  = 2;
+my $newerBackupMaxDays  = 3;
 
 my $HTMLRemoveBaseDir   = 1;
 my $HTMLRemoveXMLString = 1;
 
 my $debug               = 1;
 
+my $sortNewestFirst     = 1;
+
 # Do not change beyond this point
 #
 
-my $version             = 0.1;
+my $xmlString           = "drfComponent.xml";
+my $version             = 0.2;
 my %backupData;
+my %backupDataPre;
 my @backupDirectories;
 my $fileCounter         = 0;
 
@@ -94,17 +98,17 @@ sub handleFile {
 
         # Build the hash with the data.
         %backupFile = ( 
-            'backupFullName'    => $File::Find::name,
-            'backupLocation'    => $File::Find::dir,
-            'backupFile'        => $_,
-            'backupPrimaryHost' => $backupPrimaryHost,
-            'backupDate'        => $backupDate,
-            'backupEpoch'       => getEpoch($backupDate),
+            backupFullName    => $File::Find::name,
+            backupLocation    => $File::Find::dir,
+            backupFile        => $_,
+            backupPrimaryHost => $backupPrimaryHost,
+            backupDate        => $backupDate,
+            backupEpoch       => getEpoch($backupDate),
         );
         
         # Add it to the backupData hash. The index is just used to order the keys.
-        my $item = $backupData{$File::Find::dir}{'count'}++;
-        $backupData{$File::Find::dir}{$item} = \%backupFile;
+        my $item = $backupDataPre{$File::Find::dir}{count}++;
+        $backupDataPre{$File::Find::dir}{$item} = \%backupFile;
         # Increase the counter index
         $fileCounter++;
 
@@ -112,6 +116,49 @@ sub handleFile {
     } elsif (-d $_) {
 	# Add it to the directories array.
 	push @backupDirectories,$File::Find::name;
+    }
+}
+
+#
+# function backupDataSort()
+#
+# Sorts each directory backup by the order defined in the global variable $sortNewestFirst
+#
+sub backupDataSort {
+
+    # Let's traverse the @backupDirectories (sorted) and for each directory sort its elements
+    # before adding into the %backupData hash
+
+    foreach my $dir (keys %backupDataPre) {
+        debugMsg("backupDataSort: Sorting backups in $dir");
+        my %epochList=();
+        foreach my $item (sort keys $backupDataPre{$dir}) {
+            # Ignore the count item
+            if ($item ne "count") {
+                debugMsg("backupDataSort:  Dir:$dir  Item:$item  Epoch:$backupDataPre{$dir}{$item}{backupEpoch}");
+                $epochList{$backupDataPre{$dir}{$item}{backupEpoch}} = $item;
+            }
+        }
+        # Copy to the %backupData hash, now with sorted backups
+        
+        my $newItem=0;
+        # Newest mean higher Epoch times first
+        if ($sortNewestFirst) {
+            foreach my $oldItem (sort {$b <=> $a} values %epochList){
+                debugMsg("backupDataSort:  Dir:$dir  Item:$newItem  OldItem:$oldItem Epoch:$backupDataPre{$dir}{$oldItem}{backupEpoch}");
+                $backupData{$dir}{$newItem}=$backupDataPre{$dir}{$oldItem};
+                $newItem++;
+            }
+        # Oldest mean lower Epoch times first
+        } else {
+            foreach my $oldItem (sort {$a <=> $b} values %epochList){
+                $backupData{$dir}{$newItem}=$backupDataPre{$dir}{$oldItem};
+                $newItem++;
+            }
+        }
+        # Don't forget to copy the total count too :)
+        $backupData{$dir}{count}=$backupDataPre{$dir}{count};
+
     }
 }
 
@@ -661,14 +708,24 @@ sub generateReport {
 # Let's print the headers first
 # IE changes to quirks mode if there are comments (debug outputs are comments)
 # before the headers.
-htmlHeaders;
+#htmlHeaders;
 
 
 # Find backup files and directories
 find(\&handleFile,$baseDir);
 
+# print Dumper(\%backupDataPre);
+
+# Sorts the %backupDataPre into the %backupData by defined order
+backupDataSort();
+
+
 # The first directory found is the base directory. This should be always empty, so it will be pushed out of the array
 shift @backupDirectories;
+
+#print Dumper(\%backupData);
+
+exit;
 
 debugMsg("Current time in Epoch time (seconds since 1-Jan-1970): ".time());
 debugMsg("Total backup directories found           : ".scalar keys @backupDirectories);
