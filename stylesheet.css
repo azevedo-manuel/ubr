@@ -1,0 +1,84 @@
+.ubrTable {
+    display:inline-block;
+    margin:0px;padding:0px;
+    box-shadow: 10px 10px 5px #888888;
+    border:1px solid #000000;
+}
+
+.ubrTable table{
+    border-collapse: collapse;
+    border-spacing: 0;
+    margin:0px;padding:0px;
+}
+
+.ubrTable td{
+    vertical-align:middle;
+    border:1px solid #000000;
+    border-width:0px 1px 1px 0px;
+    text-align:left;
+    padding:7px;
+    font-size:10px;
+    font-family:Arial;
+    font-weight:normal;
+    color:#000000;
+}
+
+
+.ubrTable tr:last-child td{
+    border-width:0px 1px 0px 0px;
+}
+
+.ubrTable tr td:last-child{
+    border-width:0px 0px 1px 0px;
+}
+
+.ubrTable tr:last-child td:last-child{
+    border-width:0px 0px 0px 0px;
+}
+
+
+.ubrTable tr:first-child td{
+    background:-o-linear-gradient(bottom, #00bfbf 5%, #007f7f 100%);
+    background:-webkit-gradient( linear, left top, left bottom, color-stop(0.05, #00bfbf), color-stop(1, #007f7f) );
+    background:-moz-linear-gradient( center top, #00bfbf 5%, #007f7f 100% );
+    filter:progid:DXImageTransform.Microsoft.gradient(startColorstr="#00bfbf", endColorstr="#007f7f");
+    background: -o-linear-gradient(top,#00bfbf,007f7f);
+    background-color:#00bfbf;
+    border:0px solid #000000;
+    text-align:center;
+    border-width:0px 0px 1px 1px;
+    font-size:14px;
+    font-family:Arial;
+    font-weight:bold;
+    color:#ffffff;
+}
+
+
+.ubrTable tr:first-child td:first-child{
+    border-width:0px 0px 1px 0px;
+}
+
+.ubrTable tr:first-child td:last-child{
+    border-width:0px 0px 1px 1px;
+}
+
+
+td.bytes{
+    text-align:right;
+}
+
+.empty {
+    background-color:#b2b2b2;
+}
+
+.warning {
+    background-color:#FFCC00;
+}
+
+.ok {
+    background-color:#00bf5f;
+}
+
+.expired{
+    background-color:#CC0000;
+}

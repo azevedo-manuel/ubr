@@ -52,16 +52,38 @@ my $HTMLRemoveXMLString = 1;
 my $debug               = 1;
 
 my $sortNewestFirst     = 1;
+my $sortDirectoriesAsc  = 1;
 
 # Do not change beyond this point
 #
 
+
+#
+# Constants and global variables
+#
+
+# UCOS backup manifest XML file names usually end with this value
 my $xmlString           = "drfComponent.xml";
+
+# This ubr version. Shown in the report
 my $version             = 0.2;
-my %backupData;
-my %backupDataPre;
-my @backupDirectories;
+
+# Counts the total number of manifest files founds
 my $fileCounter         = 0;
+
+# Stores the entire information about backups found. Think database :)
+my %backupData;
+
+# Stores a list of directories
+my @backupDirectories;
+
+
+
+#
+# Functions
+#
+
+
 
 #
 # function handleFile($x);
@@ -107,8 +129,8 @@ sub handleFile {
         );
         
         # Add it to the backupData hash. The index is just used to order the keys.
-        my $item = $backupDataPre{$File::Find::dir}{count}++;
-        $backupDataPre{$File::Find::dir}{$item} = \%backupFile;
+        my $item = $backupData{$File::Find::dir}{count}++;
+        $backupData{$File::Find::dir}{$item} = \%backupFile;
         # Increase the counter index
         $fileCounter++;
 
@@ -125,6 +147,11 @@ sub handleFile {
 # Sorts each directory backup by the order defined in the global variable $sortNewestFirst
 #
 sub backupDataSort {
+    
+    # Make a copy and work with backupDataPre
+    my %backupDataPre = %backupData;
+    # Let's clear backupData
+    undef %backupData;
 
     # Let's traverse the @backupDirectories (sorted) and for each directory sort its elements
     # before adding into the %backupData hash
@@ -132,33 +159,30 @@ sub backupDataSort {
     foreach my $dir (keys %backupDataPre) {
         debugMsg("backupDataSort: Sorting backups in $dir");
         my %epochList=();
+	# Let's create an sub-hash with just the backups we want to sort
         foreach my $item (sort keys $backupDataPre{$dir}) {
             # Ignore the count item
             if ($item ne "count") {
-                debugMsg("backupDataSort:  Dir:$dir  Item:$item  Epoch:$backupDataPre{$dir}{$item}{backupEpoch}");
-                $epochList{$backupDataPre{$dir}{$item}{backupEpoch}} = $item;
+                $epochList{$item} = $backupDataPre{$dir}{$item}{backupEpoch};
             }
         }
-        # Copy to the %backupData hash, now with sorted backups
-        
+	
+	# Get the keys ordered by their value in a @keys array. The order is defined by $sortNewestFirst
+	my @keys=();
+	if ($sortNewestFirst) {
+	    @keys = sort { $epochList{$b} <=> $epochList{$a} } keys %epochList;
+	} else {
+	    @keys = sort { $epochList{$a} <=> $epochList{$b} } keys %epochList;
+	}
+
+	
         my $newItem=0;
-        # Newest mean higher Epoch times first
-        if ($sortNewestFirst) {
-            foreach my $oldItem (sort {$b <=> $a} values %epochList){
-                debugMsg("backupDataSort:  Dir:$dir  Item:$newItem  OldItem:$oldItem Epoch:$backupDataPre{$dir}{$oldItem}{backupEpoch}");
-                $backupData{$dir}{$newItem}=$backupDataPre{$dir}{$oldItem};
-                $newItem++;
-            }
-        # Oldest mean lower Epoch times first
-        } else {
-            foreach my $oldItem (sort {$a <=> $b} values %epochList){
-                $backupData{$dir}{$newItem}=$backupDataPre{$dir}{$oldItem};
-                $newItem++;
-            }
+        foreach my $oldItem ( @keys ) {
+            $backupData{$dir}{$newItem}=$backupDataPre{$dir}{$oldItem};
+            $newItem++;
         }
         # Don't forget to copy the total count too :)
         $backupData{$dir}{count}=$backupDataPre{$dir}{count};
-
     }
 }
 
@@ -363,81 +387,19 @@ sub htmlHeaders{
  <head>
   <meta charset="UTF-8">
   <title>ubr Report</title>
+    <!-- <link rel="stylesheet" type="text/css" href="stylesheet.css" /> -->
     <style type="text/css">
     .ubrTable {
     display:inline-block;
     margin:0px;padding:0px;
-	/* width:100%; */
 	box-shadow: 10px 10px 5px #888888;
     border:1px solid #000000;
-	
-	-moz-border-radius-bottomleft:0px;
-	-webkit-border-bottom-left-radius:0px;
-	border-bottom-left-radius:0px;
-	
-	-moz-border-radius-bottomright:0px;
-	-webkit-border-bottom-right-radius:0px;
-	border-bottom-right-radius:0px;
-	
-	-moz-border-radius-topright:0px;
-	-webkit-border-top-right-radius:0px;
-	border-top-right-radius:0px;
-	
-	-moz-border-radius-topleft:0px;
-	-webkit-border-top-left-radius:0px;
-	border-top-left-radius:0px;
     }
     
     .ubrTable table{
 	border-collapse: collapse;
 	border-spacing: 0;
-	/ * width:100%; */
-	/ * height:100%; */
     margin:0px;padding:0px;
-    }
-    
-    .ubrTable tr:last-child td:last-child {
-	-moz-border-radius-bottomright:0px;
-	-webkit-border-bottom-right-radius:0px;
-	border-bottom-right-radius:0px;
-    }
-    
-    .ubrTable table tr:first-child td:first-child {
-	-moz-border-radius-topleft:0px;
-	-webkit-border-top-left-radius:0px;
-	border-top-left-radius:0px;
-    }
-    
-    .ubrTable table tr:first-child td:last-child {
-	-moz-border-radius-topright:0px;
-	-webkit-border-top-right-radius:0px;
-	border-top-right-radius:0px;
-    }
-    
-    .ubrTable tr:last-child td:first-child{
-	-moz-border-radius-bottomleft:0px;
-	-webkit-border-bottom-left-radius:0px;
-	border-bottom-left-radius:0px;
-    }
-    
-    .ubrTable tr:hover td{
-	
-    }
-    
-    .empty {
-	background-color:#b2b2b2;
-    }
-    
-    .warning {
-	background-color:#FFCC00;
-    }
-    
-    .ok {
-	background-color:#00bf5f;
-    }
-    
-    .expired{
-	background-color:#CC0000;
     }
     
     .ubrTable td{
@@ -452,6 +414,7 @@ sub htmlHeaders{
     color:#000000;
     }
     
+    
     .ubrTable tr:last-child td{
 	border-width:0px 1px 0px 0px;
     }
@@ -463,6 +426,7 @@ sub htmlHeaders{
     .ubrTable tr:last-child td:last-child{
 	border-width:0px 0px 0px 0px;
     }
+    
     
     .ubrTable tr:first-child td{
     background:-o-linear-gradient(bottom, #00bfbf 5%, #007f7f 100%);
@@ -480,14 +444,6 @@ sub htmlHeaders{
     color:#ffffff;
     }
     
-    .ubrTable tr:first-child:hover td{
-    background:-o-linear-gradient(bottom, #00bfbf 5%, #007f7f 100%);
-    background:-webkit-gradient( linear, left top, left bottom, color-stop(0.05, #00bfbf), color-stop(1, #007f7f) );
-    background:-moz-linear-gradient( center top, #00bfbf 5%, #007f7f 100% );
-    filter:progid:DXImageTransform.Microsoft.gradient(startColorstr="#00bfbf", endColorstr="#007f7f");
-    background: -o-linear-gradient(top,#00bfbf,007f7f);
-	background-color:#00bfbf;
-    }
     
     .ubrTable tr:first-child td:first-child{
 	border-width:0px 0px 1px 0px;
@@ -495,6 +451,27 @@ sub htmlHeaders{
     
     .ubrTable tr:first-child td:last-child{
 	border-width:0px 0px 1px 1px;
+    }
+    
+    
+    td.bytes{
+	text-align:right;
+    }
+    
+    .empty {
+	background-color:#b2b2b2;
+    }
+    
+    .warning {
+	background-color:#FFCC00;
+    }
+    
+    .ok {
+	background-color:#00bf5f;
+    }
+    
+    .expired{
+	background-color:#CC0000;
     }
 
     </style>
@@ -543,6 +520,39 @@ sub htmlXML{
 }
 
 #
+# function formatLargeNumber($x)
+#
+# Where $x is the number you want to return in the format XXX XXX XXX
+
+sub formatLargeNumber {
+    
+    # At each 3rd digit, insert a separator
+    
+    my $x = $_[0];
+    
+    1 while ($x =~ s/^(-?\d+)(\d{3})/$1\'$2/);
+    
+    return $x;
+}
+
+#
+# function formatDays($x)
+#
+# Where $x is an integer with the number of days. If $x is 1 it returns '1 day' else returns 'x days'.
+
+sub formatDays {
+    
+    my $day=" day";
+    
+    if ($_[0] != 1) {
+	$day .= "s";
+    }
+    
+    return $_[0].$day;
+}
+
+
+#
 # function generateReport()
 #
 #
@@ -561,13 +571,13 @@ sub generateReport {
     <td>Description</td><td>Value</td>
     </tr>
     <tr>
-    <td>Report generated on </td><td>".localtime()." - ".hostfqdn()."</td>
+    <td>Report generated timestamp</td><td>".localtime()." - ".hostfqdn()."</td>
     </tr>
     <tr>
     <td>ubr version</td><td>".$version."</td>
     </tr>
     <tr>
-    <td>Newest backup is considered expired when older than</td><td>$newerBackupMaxDays days</td>
+    <td>Newest backup is expired if it is</td><td>".formatDays($newerBackupMaxDays)." or older</td>
     </tr>
     <tr>
     <td>Total number of directories found</td><td>".(scalar keys @backupDirectories)."</td>
@@ -576,7 +586,7 @@ sub generateReport {
     <td>Total number of directories with backups found </td><td>".(scalar keys %backupData)."</td>
     </tr>
     <tr>
-    <td>Total number of XML backup files</td><td>".$fileCounter."</td>
+    <td>Total number of XML backup manifest files</td><td>".$fileCounter."</td>
     </tr>
     </table>
     </div>
@@ -589,7 +599,7 @@ sub generateReport {
     print '<div class="ubrTable">';
     print "<table>\n";
     print " <tr>\n";
-    print "  <td>Directory</td><td>Overal status</td><td>Number of backups</td><td>Newest backup</td><td>Backup file</td><td>Backup status</td><td>Date</td><td>Size</td><td>Age</td>\n";
+    print "  <td>Directory</td><td>Overal status</td><td># backups</td><td>Newest backup age</td><td>Backup XML manifest file</td><td>Backup status</td><td>Date</td><td>Size (bytes)</td><td>Age</td>\n";
     print " </tr>\n";
 
 
@@ -630,12 +640,14 @@ sub generateReport {
                     $backupRow .="<td>$backupData{$dir}{$item}{'backupStatus'}</td>";
 		    # The backup date
                     $backupRow .="<td>$backupData{$dir}{$item}{'backupDate'}</td>";
+		    
 		    # The backup size
-                    $backupRow .="<td>$backupData{$dir}{$item}{'backupSize'}</td>";
+		    my $backupSize = formatLargeNumber($backupData{$dir}{$item}{'backupSize'});
+                    $backupRow .="<td class=\"bytes\">$backupSize</td>";
 		    
 		    # Calculate the total number of days this backup has
                     $backupAge=int((time()-$backupData{$dir}{$item}{'backupEpoch'})/86400);
-                    $backupRow .="<td>$backupAge days</td>\n </tr>\n";
+                    $backupRow .="<td>".formatDays($backupAge)."</td>\n </tr>\n";
 		    
 		    # Calculate which backup is newer
                     if ($backupData{$dir}{$item}{'backupEpoch'} > $backupNewer) {
@@ -659,7 +671,7 @@ sub generateReport {
 	    print "  <td rowspan=\"$numberBackups\">".htmlDir($dir)."</td>";
             print "  <td rowspan=\"$numberBackups\">$backupStatus</td>";
 	    print "  <td rowspan=\"$numberBackups\">$numberBackups</td>";
-	    print "  <td rowspan=\"$numberBackups\">$days days</td>".$backupRow;
+	    print "  <td rowspan=\"$numberBackups\">".formatDays($days)."</td>".$backupRow;
         } else {
 	    # It's an empty directory
 	    print " <tr class=\"empty\">\n";
@@ -708,24 +720,34 @@ sub generateReport {
 # Let's print the headers first
 # IE changes to quirks mode if there are comments (debug outputs are comments)
 # before the headers.
-#htmlHeaders;
+htmlHeaders;
 
 
 # Find backup files and directories
 find(\&handleFile,$baseDir);
 
-# print Dumper(\%backupDataPre);
+# Dump %backupData before sorting
+#debugMsg("Main: Unsorted hash");
+#print Dumper(\%backupData);
 
-# Sorts the %backupDataPre into the %backupData by defined order
+# Sorts the %backupData directory backups by defined order
 backupDataSort();
 
+
+#debugMsg("Main: Sorted hash");
+#print Dumper(\%backupData);
 
 # The first directory found is the base directory. This should be always empty, so it will be pushed out of the array
 shift @backupDirectories;
 
-#print Dumper(\%backupData);
+# Sort the directory array ascending if defined in $sortDirectoriesAsc, else sort descending
 
-exit;
+if ($sortDirectoriesAsc) {
+    @backupDirectories = sort {$a cmp $b} @backupDirectories;
+} else {
+    @backupDirectories = sort {$b cmp $a} @backupDirectories;
+}
+
 
 debugMsg("Current time in Epoch time (seconds since 1-Jan-1970): ".time());
 debugMsg("Total backup directories found           : ".scalar keys @backupDirectories);
