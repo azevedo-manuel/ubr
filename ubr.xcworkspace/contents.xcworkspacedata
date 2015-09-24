@@ -2,6 +2,12 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:ubr.conf">
+   </FileRef>
+   <FileRef
+      location = "group:build.cmd">
+   </FileRef>
+   <FileRef
       location = "group:stylesheet.css">
    </FileRef>
    <FileRef

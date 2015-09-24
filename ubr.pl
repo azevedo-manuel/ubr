@@ -104,16 +104,16 @@ sub readCLIArguments{
     # Get the arguments from the CLI
     Getopt::Long::Configure ("bundling");
     GetOptions(
-    'basedir|b'           => \$baseDir,
-    'newermaxdays|n'      => \$newerBackupMaxDays,
-    'removebasedir!'      => \$HTMLRemoveBaseDir,
-    'removexmlstring!'    => \$HTMLRemoveXMLString,
-    'sortnewestfirst!'    => \$sortNewestFirst,
-    'sortdirectoriesasc!' => \$sortDirectoriesAsc,
-    'help|h'              => \$help,
-    'version|V'           => \$version,
-    'debug|d'             => \$debug,
-    'conf|c'              => \$configFile
+	'basedir|b=s'         => \$baseDir,
+	'newermaxdays|n=s'    => \$newerBackupMaxDays,
+	'removebasedir!'      => \$HTMLRemoveBaseDir,
+	'removexmlstring!'    => \$HTMLRemoveXMLString,
+	'sortnewestfirst!'    => \$sortNewestFirst,
+	'sortdirectoriesasc!' => \$sortDirectoriesAsc,
+	'help|h'              => \$help,
+	'version|V'           => \$version,
+	'debug|d'             => \$debug,
+	'conf|c=s'            => \$configFile
     );
     
     # Print help to the user. Exit!
@@ -125,7 +125,7 @@ sub readCLIArguments{
     print " --conf         or -c   Another config file.                        Default value is '$configFile'\n";
     print " --basedir      or -b   The root directory where the backups are.   Default value is '$baseDir'\n";
     print " --newermaxdays or -n   The minimum number of  days a  directory    Default value is ".formatDays($newerBackupMaxDays)."\n";
-    print "                        newest backup is considered expired.      \n\n"; 
+    print "                        newest backup is considered expired.        \n\n";
     print " Boolean (True/False) options:\n";
     print " --removebasedir        Removes the base directory path from the    Default value is '".textBoolean($HTMLRemoveBaseDir)."'\n";
     print "                        directory listing.\n";
@@ -157,7 +157,73 @@ sub readCLIArguments{
     }
 }
 
+#
+# function readConfigFile()
+#
+# Check the configuration file for the parameters
+# Update the global config hash with any value found on the config file
+sub readConfigFile {
+    # Does the config file exist?
+    if ( -e $configFile ) {
+	debugMsg("readConfigFile: Config file: File '$configFile' found");
+	
+	# Read the configuration from configuration file
+	read_config $configFile => my %config;
+	
+	# Read options
+	
+	if (defined $config{''}{baseDir}){
+	    $baseDir             = $config{''}{baseDir};
+	    debugMsg("readConfigFile: %-20s = %s ","baseDir",$baseDir);
+	}
+	if (defined$config{''}{debug}){
+	    $debug               = $config{''}{debug};
+	    debugMsg("readConfigFile: %-20s = %s ","debug",$debug);
+	}
+	if (defined $config{''}{HTMLRemoveBaseDir}){
+	    $HTMLRemoveBaseDir   = $config{''}{HTMLRemoveBaseDir};
+	    debugMsg("readConfigFile: %-20s = %s ","HTMLRemoveBaseDir",$HTMLRemoveBaseDir);
+	}
+	if (defined $config{''}{HTMLRemoveXMLString}){
+	    $HTMLRemoveXMLString = $config{''}{HTMLRemoveXMLString};
+	    debugMsg("readConfigFile: %-20s = %s ","HTMLRemoveXMLString",$HTMLRemoveXMLString);
+	}
+	if (defined $config{''}{newerBackupMaxDays}){
+	    $newerBackupMaxDays  = $config{''}{newerBackupMaxDays};
+	    debugMsg("readConfigFile: %-20s = %s ","newerBackupMaxDays",$newerBackupMaxDays);
+	}
+	if (defined $config{''}{sortDirectoriesAsc}){
+	    $sortDirectoriesAsc  = $config{''}{sortDirectoriesAsc};
+	    debugMsg("readConfigFile: %-20s = %s ","sortDirectoriesAsc",$sortDirectoriesAsc);
+	}
+	if (defined $config{''}{sortNewestFirst}){
+	    $sortNewestFirst     = $config{''}{sortNewestFirst};
+	    debugMsg("readConfigFile: %-20s = %s ","sortNewestFirst",$sortNewestFirst);
+	}
 
+    } else {
+	debugMsg("Config file: No config file '$configFile' found. Assuming default values");
+    }
+}
+
+#
+# function validateConfig()
+#
+# After reading the configuration from the configuration file or command line arguments
+# display them to show which commands will the script run
+#
+sub validateConfig{
+    
+    debugMsg("validateConfig: Script will run with the following options:");
+    debugMsg("validateConfig: %-20s = %s ","baseDir",$baseDir);
+    debugMsg("validateConfig: %-20s = %s ","debug",$debug);
+    debugMsg("validateConfig: %-20s = %s ","HTMLRemoveBaseDir",$HTMLRemoveBaseDir);
+    debugMsg("validateConfig: %-20s = %s ","HTMLRemoveXMLString",$HTMLRemoveXMLString);
+    debugMsg("validateConfig: %-20s = %s ","newerBackupMaxDays",$newerBackupMaxDays);
+    debugMsg("validateConfig: %-20s = %s ","sortDirectoriesAsc",$sortDirectoriesAsc);
+    debugMsg("validateConfig: %-20s = %s ","sortNewestFirst",$sortNewestFirst);
+    
+}
 
 
 
@@ -807,17 +873,16 @@ sub generateReport {
 
 # Read the configuration file
 debugMsg('Main: Getting configuration file');
-#readConfigFile();
+readConfigFile();
 
 # Read command line arguments
 debugMsg('Main: Getting configuration from command line');
 readCLIArguments();
 
-
+# Debug print the validated configuration
+validateConfig();
 
 # Let's print the headers first
-# IE changes to quirks mode if there are comments (debug outputs are comments)
-# before the headers.
 htmlHeaders;
 
 
