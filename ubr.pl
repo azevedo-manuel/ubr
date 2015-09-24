@@ -24,15 +24,16 @@
 
 #
 # Change log:
-# Version 0.1 - Initial version
-# Version 0.2 - Fix sort issue
-# Version 0.3 - Adding configuration file and command line switches
+# Version 0.1  - Initial version
+# Version 0.2  - Fix sort issue
+# Version 0.3  - Adding configuration file and command line switches
+# Version 0.3a - Command line switch for configuration file corrected
 #
 #
 # Command line switches:
 #  See readCLIArguments() function
 
-use constant version     => "0.3 - 24.Sep.2015";
+use constant version     => "0.3a - 24.Sep.2015";
 use constant programName => "UCOS backup reporter - ubr";
 use constant developer   => "Manuel Azevedo";
 
@@ -86,8 +87,26 @@ my @backupDirectories;
 
 
 #
+# Pre processing priority command line arguments, like defining a config file or enable debug mode
+#
+#
+
+# The user might have defined another configuration file. If so, overwrite this value
+{
+    # We create this scope not to lose the original @ARGV
+    local @ARGV = @ARGV;
+    Getopt::Long::Configure ("bundling","pass_through");
+    GetOptions(
+	'conf|c=s'  => \$configFile,
+	'debug|d'   => \$debug
+    );
+}
+
+#
 # Functions
 #
+
+
 
 
 #
