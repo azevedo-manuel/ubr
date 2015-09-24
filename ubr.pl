@@ -19,7 +19,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # You can configure a cron job to send this report
-# perl ubr.pl | mail -a "Content-type text/html" -a "From:ubrbackup@backupexample.com" -s "ubr Report" user@example.com
+# perl ubr.pl | mail -a "Content-type: text/html" -a "From:ubrbackup@backupexample.com" -s "ubr Report" user@example.com
 
 
 #
@@ -42,14 +42,14 @@ use Net::Domain qw(hostfqdn);
 #
 # App parameters
 
-my $baseDir             = "../CUCM/backup";
+my $baseDir             = "./backup";
 
 my $newerBackupMaxDays  = 3;
 
 my $HTMLRemoveBaseDir   = 1;
 my $HTMLRemoveXMLString = 1;
 
-my $debug               = 1;
+my $debug               = 0;
 
 my $sortNewestFirst     = 1;
 my $sortDirectoriesAsc  = 1;
