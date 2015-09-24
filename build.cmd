@@ -16,7 +16,7 @@ set buildoptions=-c
 set buildfile=ubr.exe
 set sourcefile=ubr.pl
 set bundlefile=ubr-v%1.zip
-set includefiles=%buildfile% Readme.md doc
+set includefiles=%buildfile% Readme.md ubr.conf ubr-0.2.html doc
 set sevenzipfile="c:\Program Files\7-Zip\7z.exe"
 set sevenzipopts=a -r -y
 
