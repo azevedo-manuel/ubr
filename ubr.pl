@@ -26,10 +26,16 @@
 # Change log:
 # Version 0.1 - Initial version
 # Version 0.2 - Fix sort issue
+# Version 0.3 - Adding configuration file and command line switches
 #
 #
 # Command line switches:
-#  None for the moment
+#  See readCLIArguments() function
+
+use constant version     => "0.3 - 24.Sep.2015";
+use constant programName => "UCOS backup reporter - ubr";
+use constant developer   => "Manuel Azevedo";
+
 
 use strict;
 use File::Find;
@@ -37,10 +43,13 @@ use Data::Dumper;
 use Time::Local;
 use XML::Simple qw(:strict);
 use Net::Domain qw(hostfqdn);
-
+use Getopt::Long;
+use Config::Std;
 
 #
 # App parameters
+
+my $configFile          = "ubr.conf";
 
 my $baseDir             = "./backup";
 
@@ -65,9 +74,6 @@ my $sortDirectoriesAsc  = 1;
 # UCOS backup manifest XML file names usually end with this value
 my $xmlString           = "drfComponent.xml";
 
-# This ubr version. Shown in the report
-my $version             = 0.2;
-
 # Counts the total number of manifest files founds
 my $fileCounter         = 0;
 
@@ -82,6 +88,76 @@ my @backupDirectories;
 #
 # Functions
 #
+
+
+#
+# function readCLIArguments()
+#
+# Read command line arguments and parse them.
+# Display help and version information
+# As CLI options take priority over configuration file options and built-in defaults
+sub readCLIArguments{
+    
+    my $help;
+    my $version;
+
+    # Get the arguments from the CLI
+    Getopt::Long::Configure ("bundling");
+    GetOptions(
+    'basedir|b'           => \$baseDir,
+    'newermaxdays|n'      => \$newerBackupMaxDays,
+    'removebasedir!'      => \$HTMLRemoveBaseDir,
+    'removexmlstring!'    => \$HTMLRemoveXMLString,
+    'sortnewestfirst!'    => \$sortNewestFirst,
+    'sortdirectoriesasc!' => \$sortDirectoriesAsc,
+    'help|h'              => \$help,
+    'version|V'           => \$version,
+    'debug|d'             => \$debug,
+    'conf|c'              => \$configFile
+    );
+    
+    # Print help to the user. Exit!
+    if ($help){
+    print "\nUsage: ";
+    print $0." -options \n\n";
+    print "where options are:\n\n";
+    print " Options with arguments:\n";
+    print " --conf         or -c   Another config file.                        Default value is '$configFile'\n";
+    print " --basedir      or -b   The root directory where the backups are.   Default value is '$baseDir'\n";
+    print " --newermaxdays or -n   The minimum number of  days a  directory    Default value is ".formatDays($newerBackupMaxDays)."\n";
+    print "                        newest backup is considered expired.      \n\n"; 
+    print " Boolean (True/False) options:\n";
+    print " --removebasedir        Removes the base directory path from the    Default value is '".textBoolean($HTMLRemoveBaseDir)."'\n";
+    print "                        directory listing.\n";
+    print " --removexmlstring      Removes  '_drfComponent.xml'  from   the    Default value is '".textBoolean($HTMLRemoveXMLString)."'\n";
+    print "                        backup job name.\n";
+    print " --sortnewestfirst      Sorts newest backup jobs first.             Default value is '".textBoolean($sortNewestFirst)."'\n";
+    print " --sortdirectoriesasc   Sorts directories in ascending order.       Default value is '".textBoolean($sortDirectoriesAsc)."'\n\n";
+    print " Options without arguments:\n";
+    print " --help         or -h   This menu\n";
+    print " --debug        or -d   Enable diagnostics debug messages\n\n";
+    
+    print " Note:    The boolean options can  be negated by replacing '--' with '--no-' and thus make it false.\n\n";
+    print " Example: If you want to order the directory  listing  in  descending, \n";
+    print "          just write the option as '--no-sortdirectoriesasc' \n\n";
+   
+    print "These switches overwrite both the built-in defaults or the '$configFile' configuration file \n\n";
+    print "All options are case sensitive!\n";
+    exit 0;
+    }
+    
+    # Print version information
+    if ($version){
+    print "\n";
+    print "Application : ".programName."\n";
+    print "Version     : ".version."\n";
+    print "Copyright   : ".developer."\n";
+    print "Platform    : $^O\n\n";
+    exit 0;
+    }
+}
+
+
 
 
 
@@ -136,8 +212,8 @@ sub handleFile {
 
     # If it's a directory
     } elsif (-d $_) {
-	# Add it to the directories array.
-	push @backupDirectories,$File::Find::name;
+    # Add it to the directories array.
+    push @backupDirectories,$File::Find::name;
     }
 }
 
@@ -159,23 +235,23 @@ sub backupDataSort {
     foreach my $dir (keys %backupDataPre) {
         debugMsg("backupDataSort: Sorting backups in $dir");
         my %epochList=();
-	# Let's create an sub-hash with just the backups we want to sort
+    # Let's create an sub-hash with just the backups we want to sort
         foreach my $item (sort keys $backupDataPre{$dir}) {
             # Ignore the count item
             if ($item ne "count") {
                 $epochList{$item} = $backupDataPre{$dir}{$item}{backupEpoch};
             }
         }
-	
-	# Get the keys ordered by their value in a @keys array. The order is defined by $sortNewestFirst
-	my @keys=();
-	if ($sortNewestFirst) {
-	    @keys = sort { $epochList{$b} <=> $epochList{$a} } keys %epochList;
-	} else {
-	    @keys = sort { $epochList{$a} <=> $epochList{$b} } keys %epochList;
-	}
+    
+    # Get the keys ordered by their value in a @keys array. The order is defined by $sortNewestFirst
+    my @keys=();
+    if ($sortNewestFirst) {
+        @keys = sort { $epochList{$b} <=> $epochList{$a} } keys %epochList;
+    } else {
+        @keys = sort { $epochList{$a} <=> $epochList{$b} } keys %epochList;
+    }
 
-	
+    
         my $newItem=0;
         foreach my $oldItem ( @keys ) {
             $backupData{$dir}{$newItem}=$backupDataPre{$dir}{$oldItem};
@@ -215,8 +291,8 @@ sub getEpoch{
 # Print a debug line if '$debug' is defined. First argument can be a printf string
 sub debugMsg{
     if ($debug) {
-	printf "<!-- DEBUG > $_[0] -->\n",$_[1],$_[2];
-	$|=1;
+    printf "<!-- DEBUG > $_[0] -->\n",$_[1],$_[2];
+    $|=1;
     }
 }
 
@@ -310,16 +386,16 @@ sub validateXML {
                 # We now have all the information to build the backup file name and check if it exists
                 my $tarFile = $XMLdate."_".$serverKey->{ServerName}[0]."_".$featureKey->{FeatureName}[0]."_".$componentKey->{ComponentName}[0].".tar";
                
-		debugMsg("validateXML:      Testing file $XMLdir/$tarFile");
+        debugMsg("validateXML:      Testing file $XMLdir/$tarFile");
  
-		# Check if the TAR file exists
+        # Check if the TAR file exists
                 if (-e $XMLdir."/".$tarFile) {
-		    # TAR file found. Status is "SUCESS"
+            # TAR file found. Status is "SUCESS"
                     $XMLstatus = "SUCCESS";
-		    # For this backup add the size of this TAR file to the total
+            # For this backup add the size of this TAR file to the total
                     $XMLsize += -s $XMLdir."/".$tarFile;
                 } else {
-		    # TAR file was not found
+            # TAR file was not found
                     $XMLstatus = "MISSING";
                 }
                 debugMsg("validateXML:       Filename: %-75s Status: %-20s",$tarFile,$XMLstatus);
@@ -329,9 +405,9 @@ sub validateXML {
 
     # No TAR file in this backup failed, so it's success
     if ($XMLstatus eq "SUCCESS") {
-	debugMsg("validateXML: >>> Sucessfull backup using $XMLsize bytes of space");
-	# Change the status to the size of the backup
-	$XMLstatus = $XMLsize;
+    debugMsg("validateXML: >>> Sucessfull backup using $XMLsize bytes of space");
+    # Change the status to the size of the backup
+    $XMLstatus = $XMLsize;
     }
     
     # Return size or error status
@@ -392,39 +468,39 @@ sub htmlHeaders{
     .ubrTable {
     display:inline-block;
     margin:0px;padding:0px;
-	box-shadow: 10px 10px 5px #888888;
+    box-shadow: 10px 10px 5px #888888;
     border:1px solid #000000;
     }
     
     .ubrTable table{
-	border-collapse: collapse;
-	border-spacing: 0;
+    border-collapse: collapse;
+    border-spacing: 0;
     margin:0px;padding:0px;
     }
     
     .ubrTable td{
-	vertical-align:middle;
+    vertical-align:middle;
     border:1px solid #000000;
-	border-width:0px 1px 1px 0px;
-	text-align:left;
+    border-width:0px 1px 1px 0px;
+    text-align:left;
     padding:7px;
-	font-size:10px;
-	font-family:Arial;
-	font-weight:normal;
+    font-size:10px;
+    font-family:Arial;
+    font-weight:normal;
     color:#000000;
     }
     
     
     .ubrTable tr:last-child td{
-	border-width:0px 1px 0px 0px;
+    border-width:0px 1px 0px 0px;
     }
     
     .ubrTable tr td:last-child{
-	border-width:0px 0px 1px 0px;
+    border-width:0px 0px 1px 0px;
     }
     
     .ubrTable tr:last-child td:last-child{
-	border-width:0px 0px 0px 0px;
+    border-width:0px 0px 0px 0px;
     }
     
     
@@ -434,44 +510,44 @@ sub htmlHeaders{
     background:-moz-linear-gradient( center top, #00bfbf 5%, #007f7f 100% );
     filter:progid:DXImageTransform.Microsoft.gradient(startColorstr="#00bfbf", endColorstr="#007f7f");
     background: -o-linear-gradient(top,#00bfbf,007f7f);
-	background-color:#00bfbf;
+    background-color:#00bfbf;
     border:0px solid #000000;
-	text-align:center;
-	border-width:0px 0px 1px 1px;
-	font-size:14px;
-	font-family:Arial;
-	font-weight:bold;
+    text-align:center;
+    border-width:0px 0px 1px 1px;
+    font-size:14px;
+    font-family:Arial;
+    font-weight:bold;
     color:#ffffff;
     }
     
     
     .ubrTable tr:first-child td:first-child{
-	border-width:0px 0px 1px 0px;
+    border-width:0px 0px 1px 0px;
     }
     
     .ubrTable tr:first-child td:last-child{
-	border-width:0px 0px 1px 1px;
+    border-width:0px 0px 1px 1px;
     }
     
     
     td.bytes{
-	text-align:right;
+    text-align:right;
     }
     
     .empty {
-	background-color:#b2b2b2;
+    background-color:#b2b2b2;
     }
     
     .warning {
-	background-color:#FFCC00;
+    background-color:#FFCC00;
     }
     
     .ok {
-	background-color:#00bf5f;
+    background-color:#00bf5f;
     }
     
     .expired{
-	background-color:#CC0000;
+    background-color:#CC0000;
     }
 
     </style>
@@ -493,8 +569,8 @@ sub htmlDir{
     
     # If global variable is true, let's remove the $baseDir from the string
     if ($HTMLRemoveBaseDir) {
-	# $baseDir does not contain a forward slash. Include it to remove it too
-	$htmldir =~ s/$baseDir\///;
+    # $baseDir does not contain a forward slash. Include it to remove it too
+    $htmldir =~ s/$baseDir\///;
     }
     
     # Return string
@@ -512,8 +588,8 @@ sub htmlXML{
     
     # If global variable is true, let's remove the $xmlString from the string
     if ($HTMLRemoveXMLString) {
-	# $xmlString does not contain the underscore. Include it to remove it too
-	$htmlxml =~ s/_$xmlString//;
+    # $xmlString does not contain the underscore. Include it to remove it too
+    $htmlxml =~ s/_$xmlString//;
     }
     # Return string
     return $htmlxml;
@@ -545,10 +621,22 @@ sub formatDays {
     my $day=" day";
     
     if ($_[0] != 1) {
-	$day .= "s";
+    $day .= "s";
     }
     
     return $_[0].$day;
+}
+
+#
+# function textBoolean($x)
+#
+# When $x is 0, '0', undef or '' it will return false, otherwise always true
+sub textBoolean {
+    if ($_[0]) {
+        return "true";
+    } else {
+        return "false";
+    }
 }
 
 
@@ -564,7 +652,7 @@ sub generateReport {
 
     
     # Print generic information table
-    print "	
+    print "    
     <div class=\"ubrTable\">
     <table>
     <tr>
@@ -574,7 +662,7 @@ sub generateReport {
     <td>Report generated timestamp</td><td>".localtime()." - ".hostfqdn()."</td>
     </tr>
     <tr>
-    <td>ubr version</td><td>".$version."</td>
+    <td>ubr version</td><td>".version."</td>
     </tr>
     <tr>
     <td>Newest backup is expired if it is</td><td>".formatDays($newerBackupMaxDays)." or older</td>
@@ -605,79 +693,79 @@ sub generateReport {
 
     # For all backup directories found
     foreach my $dir (@backupDirectories) {
-	# The total number of backups per directory is stored in "count"
+    # The total number of backups per directory is stored in "count"
         my $numberBackups=$backupData{$dir}{'count'};
-	# Means this is not an empty directory!
+    # Means this is not an empty directory!
         if ( $numberBackups > 0) {
-	    # As we use spans to agregate all backups from a server, we need to buffer the various
-	    # backups per directory in this placeholder before we flush it correctly
+        # As we use spans to agregate all backups from a server, we need to buffer the various
+        # backups per directory in this placeholder before we flush it correctly
             my $backupRow ="";
             # Get the epoch from the first item
             my $backupNewer=$backupData{$dir}{'0'}{'backupEpoch'};
             my $backupAge;
-	    # Let's assume the backup is OK
+        # Let's assume the backup is OK
             my $backupStatus = "OK";
-	    # Counter of the number of backups per this directory
-	    my $count=0;
-	    # Let's now go to each backup in this directory
-	    foreach my $item (sort keys $backupData{$dir}){
-		# The hash item count is ignored. The remaining are used.
+        # Counter of the number of backups per this directory
+        my $count=0;
+        # Let's now go to each backup in this directory
+        foreach my $item (sort keys $backupData{$dir}){
+        # The hash item count is ignored. The remaining are used.
                 if ($item ne "count") {
-		    # If this is the first backup, we define a table row
-		    if ($count > 0) {
-			# The backupStatus is mapped directly to the CSS
-			$backupRow .= "\n <tr class=\"".lc($backupStatus)."\">\n";
-		    }
-		    
-		    # Include the XML filename
+            # If this is the first backup, we define a table row
+            if ($count > 0) {
+            # The backupStatus is mapped directly to the CSS
+            $backupRow .= "\n <tr class=\"".lc($backupStatus)."\">\n";
+            }
+            
+            # Include the XML filename
                     $backupRow  .="<td>".htmlXML($backupData{$dir}{$item}{'backupFile'})."</td>";
-		    # If the backupStatus of a backup is not sucess, the status of the entire directory changes
-		    # to warning
+            # If the backupStatus of a backup is not sucess, the status of the entire directory changes
+            # to warning
                     if (($backupData{$dir}{$item}{'backupStatus'} ne "SUCCESS")) {
                         $backupStatus = "WARNING";
                     }
-		    # The status of the backup
+            # The status of the backup
                     $backupRow .="<td>$backupData{$dir}{$item}{'backupStatus'}</td>";
-		    # The backup date
+            # The backup date
                     $backupRow .="<td>$backupData{$dir}{$item}{'backupDate'}</td>";
-		    
-		    # The backup size
-		    my $backupSize = formatLargeNumber($backupData{$dir}{$item}{'backupSize'});
+            
+            # The backup size
+            my $backupSize = formatLargeNumber($backupData{$dir}{$item}{'backupSize'});
                     $backupRow .="<td class=\"bytes\">$backupSize</td>";
-		    
-		    # Calculate the total number of days this backup has
+            
+            # Calculate the total number of days this backup has
                     $backupAge=int((time()-$backupData{$dir}{$item}{'backupEpoch'})/86400);
                     $backupRow .="<td>".formatDays($backupAge)."</td>\n </tr>\n";
-		    
-		    # Calculate which backup is newer
+            
+            # Calculate which backup is newer
                     if ($backupData{$dir}{$item}{'backupEpoch'} > $backupNewer) {
-			debugMsg("generateReport: \$backupNewer=$backupNewer - Item $item backupEpoch=$backupData{$dir}{$item}{'backupEpoch'}");
+            debugMsg("generateReport: \$backupNewer=$backupNewer - Item $item backupEpoch=$backupData{$dir}{$item}{'backupEpoch'}");
                         $backupNewer=$backupData{$dir}{$item}{'backupEpoch'}
                     }
-		# Count the next item
-		$count++;
+        # Count the next item
+        $count++;
                 }
-		
+        
             }
-	    # The number of days of the newer backup
+        # The number of days of the newer backup
             my $days = int((time()-$backupNewer)/86400);
-	    # If the backup files look OK, but the newest backup is older than the trigger
-	    if ($days >= $newerBackupMaxDays and $backupStatus eq "OK") {
-		# Backup is expired
-		$backupStatus="EXPIRED"
-	    }
-	    # Build row for the directory
-	    print " <tr class=\"".lc($backupStatus)."\">\n";
-	    print "  <td rowspan=\"$numberBackups\">".htmlDir($dir)."</td>";
+        # If the backup files look OK, but the newest backup is older than the trigger
+        if ($days >= $newerBackupMaxDays and $backupStatus eq "OK") {
+        # Backup is expired
+        $backupStatus="EXPIRED"
+        }
+        # Build row for the directory
+        print " <tr class=\"".lc($backupStatus)."\">\n";
+        print "  <td rowspan=\"$numberBackups\">".htmlDir($dir)."</td>";
             print "  <td rowspan=\"$numberBackups\">$backupStatus</td>";
-	    print "  <td rowspan=\"$numberBackups\">$numberBackups</td>";
-	    print "  <td rowspan=\"$numberBackups\">".formatDays($days)."</td>".$backupRow;
+        print "  <td rowspan=\"$numberBackups\">$numberBackups</td>";
+        print "  <td rowspan=\"$numberBackups\">".formatDays($days)."</td>".$backupRow;
         } else {
-	    # It's an empty directory
-	    print " <tr class=\"empty\">\n";
+        # It's an empty directory
+        print " <tr class=\"empty\">\n";
             print "  <td>".htmlDir($dir)."</td>\n";
             print "  <td>Empty</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>\n";
-	    print " </tr>\n";
+        print " </tr>\n";
         }
     }
     # Finish the table. Include description table with legend.
@@ -716,6 +804,16 @@ sub generateReport {
 
 
 # Main execution
+
+# Read the configuration file
+debugMsg('Main: Getting configuration file');
+#readConfigFile();
+
+# Read command line arguments
+debugMsg('Main: Getting configuration from command line');
+readCLIArguments();
+
+
 
 # Let's print the headers first
 # IE changes to quirks mode if there are comments (debug outputs are comments)
