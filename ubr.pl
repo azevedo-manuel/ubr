@@ -28,12 +28,15 @@
 # Version 0.2  - Fix sort issue
 # Version 0.3  - Adding configuration file and command line switches
 # Version 0.3a - Command line switch for configuration file corrected
+# Version 0.3b - For Perl versions older than 5.14, hash key reference filed. 
+#                Changed code to be compatible. Does not affect Windows binary
+#                No additinol functionality added.
 #
 #
 # Command line switches:
 #  See readCLIArguments() function
 
-use constant version     => "0.3a - 24.Sep.2015";
+use constant version     => "0.3b - 28.Sep.2015";
 use constant programName => "UCOS backup reporter - ubr";
 use constant developer   => "Manuel Azevedo";
 
@@ -321,7 +324,7 @@ sub backupDataSort {
         debugMsg("backupDataSort: Sorting backups in $dir");
         my %epochList=();
     # Let's create an sub-hash with just the backups we want to sort
-        foreach my $item (sort keys $backupDataPre{$dir}) {
+        foreach my $item (sort keys (%{$backupDataPre{$dir}})) {
             # Ignore the count item
             if ($item ne "count") {
                 $epochList{$item} = $backupDataPre{$dir}{$item}{backupEpoch};
@@ -512,7 +515,7 @@ sub validateBackup {
         # If there are files in this directory
         if ($backupData{$dir}{'count'} > 0) {
             # For each XML file in this directory
-            foreach my $item (keys $backupData{$dir}) {
+            foreach my $item (keys (%{$backupData{$dir}})) {
                 # Ignore the count item.
                 if ($item ne "count") {
                     # The total number of days of a backup is calculated
@@ -793,7 +796,7 @@ sub generateReport {
         # Counter of the number of backups per this directory
         my $count=0;
         # Let's now go to each backup in this directory
-        foreach my $item (sort keys $backupData{$dir}){
+        foreach my $item (sort keys (%{$backupData{$dir}})){
         # The hash item count is ignored. The remaining are used.
                 if ($item ne "count") {
             # If this is the first backup, we define a table row
