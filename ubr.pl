@@ -31,12 +31,13 @@
 # Version 0.3b - For Perl versions older than 5.14, hash key reference filed. 
 #                Changed code to be compatible. Does not affect Windows binary
 #                No additinol functionality added.
+# Version 0.3c - Some "WARNING" backups were not correctly identified
 #
 #
 # Command line switches:
 #  See readCLIArguments() function
 
-use constant version     => "0.3b - 28.Sep.2015";
+use constant version     => "0.3c - 22.Apr.2016";
 use constant programName => "UCOS backup reporter - ubr";
 use constant developer   => "Manuel Azevedo";
 
@@ -100,8 +101,8 @@ my @backupDirectories;
     local @ARGV = @ARGV;
     Getopt::Long::Configure ("bundling","pass_through");
     GetOptions(
-	'conf|c=s'  => \$configFile,
-	'debug|d'   => \$debug
+    'conf|c=s'  => \$configFile,
+    'debug|d'   => \$debug
     );
 }
 
@@ -126,16 +127,16 @@ sub readCLIArguments{
     # Get the arguments from the CLI
     Getopt::Long::Configure ("bundling");
     GetOptions(
-	'basedir|b=s'         => \$baseDir,
-	'newermaxdays|n=s'    => \$newerBackupMaxDays,
-	'removebasedir!'      => \$HTMLRemoveBaseDir,
-	'removexmlstring!'    => \$HTMLRemoveXMLString,
-	'sortnewestfirst!'    => \$sortNewestFirst,
-	'sortdirectoriesasc!' => \$sortDirectoriesAsc,
-	'help|h'              => \$help,
-	'version|V'           => \$version,
-	'debug|d'             => \$debug,
-	'conf|c=s'            => \$configFile
+    'basedir|b=s'         => \$baseDir,
+    'newermaxdays|n=s'    => \$newerBackupMaxDays,
+    'removebasedir!'      => \$HTMLRemoveBaseDir,
+    'removexmlstring!'    => \$HTMLRemoveXMLString,
+    'sortnewestfirst!'    => \$sortNewestFirst,
+    'sortdirectoriesasc!' => \$sortDirectoriesAsc,
+    'help|h'              => \$help,
+    'version|V'           => \$version,
+    'debug|d'             => \$debug,
+    'conf|c=s'            => \$configFile
     );
     
     # Print help to the user. Exit!
@@ -187,44 +188,44 @@ sub readCLIArguments{
 sub readConfigFile {
     # Does the config file exist?
     if ( -e $configFile ) {
-	debugMsg("readConfigFile: Config file: File '$configFile' found");
-	
-	# Read the configuration from configuration file
-	read_config $configFile => my %config;
-	
-	# Read options
-	
-	if (defined $config{''}{baseDir}){
-	    $baseDir             = $config{''}{baseDir};
-	    debugMsg("readConfigFile: %-20s = %s ","baseDir",$baseDir);
-	}
-	if (defined$config{''}{debug}){
-	    $debug               = $config{''}{debug};
-	    debugMsg("readConfigFile: %-20s = %s ","debug",$debug);
-	}
-	if (defined $config{''}{HTMLRemoveBaseDir}){
-	    $HTMLRemoveBaseDir   = $config{''}{HTMLRemoveBaseDir};
-	    debugMsg("readConfigFile: %-20s = %s ","HTMLRemoveBaseDir",$HTMLRemoveBaseDir);
-	}
-	if (defined $config{''}{HTMLRemoveXMLString}){
-	    $HTMLRemoveXMLString = $config{''}{HTMLRemoveXMLString};
-	    debugMsg("readConfigFile: %-20s = %s ","HTMLRemoveXMLString",$HTMLRemoveXMLString);
-	}
-	if (defined $config{''}{newerBackupMaxDays}){
-	    $newerBackupMaxDays  = $config{''}{newerBackupMaxDays};
-	    debugMsg("readConfigFile: %-20s = %s ","newerBackupMaxDays",$newerBackupMaxDays);
-	}
-	if (defined $config{''}{sortDirectoriesAsc}){
-	    $sortDirectoriesAsc  = $config{''}{sortDirectoriesAsc};
-	    debugMsg("readConfigFile: %-20s = %s ","sortDirectoriesAsc",$sortDirectoriesAsc);
-	}
-	if (defined $config{''}{sortNewestFirst}){
-	    $sortNewestFirst     = $config{''}{sortNewestFirst};
-	    debugMsg("readConfigFile: %-20s = %s ","sortNewestFirst",$sortNewestFirst);
-	}
+    debugMsg("readConfigFile: Config file: File '$configFile' found");
+    
+    # Read the configuration from configuration file
+    read_config $configFile => my %config;
+    
+    # Read options
+    
+    if (defined $config{''}{baseDir}){
+        $baseDir             = $config{''}{baseDir};
+        debugMsg("readConfigFile: %-20s = %s ","baseDir",$baseDir);
+    }
+    if (defined$config{''}{debug}){
+        $debug               = $config{''}{debug};
+        debugMsg("readConfigFile: %-20s = %s ","debug",$debug);
+    }
+    if (defined $config{''}{HTMLRemoveBaseDir}){
+        $HTMLRemoveBaseDir   = $config{''}{HTMLRemoveBaseDir};
+        debugMsg("readConfigFile: %-20s = %s ","HTMLRemoveBaseDir",$HTMLRemoveBaseDir);
+    }
+    if (defined $config{''}{HTMLRemoveXMLString}){
+        $HTMLRemoveXMLString = $config{''}{HTMLRemoveXMLString};
+        debugMsg("readConfigFile: %-20s = %s ","HTMLRemoveXMLString",$HTMLRemoveXMLString);
+    }
+    if (defined $config{''}{newerBackupMaxDays}){
+        $newerBackupMaxDays  = $config{''}{newerBackupMaxDays};
+        debugMsg("readConfigFile: %-20s = %s ","newerBackupMaxDays",$newerBackupMaxDays);
+    }
+    if (defined $config{''}{sortDirectoriesAsc}){
+        $sortDirectoriesAsc  = $config{''}{sortDirectoriesAsc};
+        debugMsg("readConfigFile: %-20s = %s ","sortDirectoriesAsc",$sortDirectoriesAsc);
+    }
+    if (defined $config{''}{sortNewestFirst}){
+        $sortNewestFirst     = $config{''}{sortNewestFirst};
+        debugMsg("readConfigFile: %-20s = %s ","sortNewestFirst",$sortNewestFirst);
+    }
 
     } else {
-	debugMsg("Config file: No config file '$configFile' found. Assuming default values");
+    debugMsg("Config file: No config file '$configFile' found. Assuming default values");
     }
 }
 
@@ -523,7 +524,7 @@ sub validateBackup {
                     
                     my $backupSize = validateXML($backupData{$dir}{$item}{'backupFile'},$backupData{$dir}{$item}{'backupDate'},$backupData{$dir}{$item}{'backupLocation'});
                     
-                    if ($backupSize =~ /ERROR|MISSING/) {
+                    if ($backupSize =~ /ERROR|MISSING|WARNING/) {
                         debugMsg("validateBackup: Backup $backupData{$dir}{$item}{'backupFile'} is invalid");
                         $backupData{$dir}{$item}{'backupStatus'}=$backupSize;
                     } else {
@@ -785,75 +786,75 @@ sub generateReport {
         my $numberBackups=$backupData{$dir}{'count'};
     # Means this is not an empty directory!
         if ( $numberBackups > 0) {
-        # As we use spans to agregate all backups from a server, we need to buffer the various
-        # backups per directory in this placeholder before we flush it correctly
+            # As we use spans to agregate all backups from a server, we need to buffer the various
+            # backups per directory in this placeholder before we flush it correctly
             my $backupRow ="";
             # Get the epoch from the first item
             my $backupNewer=$backupData{$dir}{'0'}{'backupEpoch'};
             my $backupAge;
-        # Let's assume the backup is OK
+            # Let's assume the backup is OK
             my $backupStatus = "OK";
-        # Counter of the number of backups per this directory
-        my $count=0;
-        # Let's now go to each backup in this directory
-        foreach my $item (sort keys (%{$backupData{$dir}})){
-        # The hash item count is ignored. The remaining are used.
+            # Counter of the number of backups per this directory
+            my $count=0;
+            # Let's now go to each backup in this directory
+            foreach my $item (sort keys (%{$backupData{$dir}})){
+                # The hash item count is ignored. The remaining are used.
                 if ($item ne "count") {
-            # If this is the first backup, we define a table row
-            if ($count > 0) {
-            # The backupStatus is mapped directly to the CSS
-            $backupRow .= "\n <tr class=\"".lc($backupStatus)."\">\n";
-            }
-            
-            # Include the XML filename
-                    $backupRow  .="<td>".htmlXML($backupData{$dir}{$item}{'backupFile'})."</td>";
-            # If the backupStatus of a backup is not sucess, the status of the entire directory changes
-            # to warning
+                    # If the backupStatus of a backup is not sucess, the status of the entire directory changes
+                    # to warning
                     if (($backupData{$dir}{$item}{'backupStatus'} ne "SUCCESS")) {
                         $backupStatus = "WARNING";
                     }
-            # The status of the backup
+                    # If this is the first backup, we define a table row
+                    if ($count > 0) {
+                        # The backupStatus is mapped directly to the CSS
+                        $backupRow .= "\n <tr class=\"".lc($backupStatus)."\">\n";
+                    }
+                
+                    # Include the XML filename
+                    $backupRow  .="<td>".htmlXML($backupData{$dir}{$item}{'backupFile'})."</td>";
+                    # The status of the backup
                     $backupRow .="<td>$backupData{$dir}{$item}{'backupStatus'}</td>";
-            # The backup date
+                    # The backup date
                     $backupRow .="<td>$backupData{$dir}{$item}{'backupDate'}</td>";
-            
-            # The backup size
-            my $backupSize = formatLargeNumber($backupData{$dir}{$item}{'backupSize'});
+                
+                    # The backup size
+                    my $backupSize = formatLargeNumber($backupData{$dir}{$item}{'backupSize'});
                     $backupRow .="<td class=\"bytes\">$backupSize</td>";
-            
-            # Calculate the total number of days this backup has
+                
+                    # Calculate the total number of days this backup has
                     $backupAge=int((time()-$backupData{$dir}{$item}{'backupEpoch'})/86400);
                     $backupRow .="<td>".formatDays($backupAge)."</td>\n </tr>\n";
-            
-            # Calculate which backup is newer
+                
+                    # Calculate which backup is newer
                     if ($backupData{$dir}{$item}{'backupEpoch'} > $backupNewer) {
-            debugMsg("generateReport: \$backupNewer=$backupNewer - Item $item backupEpoch=$backupData{$dir}{$item}{'backupEpoch'}");
+                        debugMsg("generateReport: \$backupNewer=$backupNewer - Item $item backupEpoch=$backupData{$dir}{$item}{'backupEpoch'}");
                         $backupNewer=$backupData{$dir}{$item}{'backupEpoch'}
                     }
-        # Count the next item
-        $count++;
+                    # Count the next item
+                    $count++;
                 }
-        
+            
             }
-        # The number of days of the newer backup
+            # The number of days of the newer backup
             my $days = int((time()-$backupNewer)/86400);
-        # If the backup files look OK, but the newest backup is older than the trigger
-        if ($days >= $newerBackupMaxDays and $backupStatus eq "OK") {
-        # Backup is expired
-        $backupStatus="EXPIRED"
-        }
-        # Build row for the directory
-        print " <tr class=\"".lc($backupStatus)."\">\n";
-        print "  <td rowspan=\"$numberBackups\">".htmlDir($dir)."</td>";
+            # If the backup files look OK, but the newest backup is older than the trigger
+            if ($days >= $newerBackupMaxDays and $backupStatus eq "OK") {
+                # Backup is expired
+                $backupStatus="EXPIRED"
+            }
+            # Build row for the directory
+            print " <tr class=\"".lc($backupStatus)."\">\n";
+            print "  <td rowspan=\"$numberBackups\">".htmlDir($dir)."</td>";
             print "  <td rowspan=\"$numberBackups\">$backupStatus</td>";
-        print "  <td rowspan=\"$numberBackups\">$numberBackups</td>";
-        print "  <td rowspan=\"$numberBackups\">".formatDays($days)."</td>".$backupRow;
+            print "  <td rowspan=\"$numberBackups\">$numberBackups</td>";
+            print "  <td rowspan=\"$numberBackups\">".formatDays($days)."</td>".$backupRow;
         } else {
         # It's an empty directory
-        print " <tr class=\"empty\">\n";
+            print " <tr class=\"empty\">\n";
             print "  <td>".htmlDir($dir)."</td>\n";
             print "  <td>Empty</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>\n";
-        print " </tr>\n";
+            print " </tr>\n";
         }
     }
     # Finish the table. Include description table with legend.
